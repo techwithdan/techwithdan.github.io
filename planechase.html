@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planechase Companion</title>
+    <style>
+        :root {
+            --background-dark: #121212;
+            --surface-color: #1e1e1e;
+            --primary-text: #e0e0e0;
+            --accent-color: #bb86fc;
+            --chaos-color: #cf6679;
+            --planeswalk-color: #03dac6;
+            --button-color: #03a9f4;
+        }
+
+        body {
+            background-color: var(--background-dark);
+            color: var(--primary-text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 480px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #loading-message, #error-message {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+        
+        #error-message {
+            color: var(--chaos-color);
+        }
+
+        #game-area {
+            display: none;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #card-image {
+            width: 100%;
+            height: auto;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            background-color: var(--surface-color);
+            aspect-ratio: 3.5 / 5; 
+        }
+
+        #card-info {
+            background-color: var(--surface-color);
+            padding: 1.2rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            text-align: left;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #card-name {
+            margin-top: 0;
+            font-size: 1.4rem;
+            font-weight: 600;
+            border-bottom: 1px solid #444;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        #card-effect, #chaos-effect {
+            margin-bottom: 0;
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+
+        #chaos-effect {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px dashed #444;
+            font-style: italic;
+            transition: all 0.3s ease-in-out;
+        }
+
+        #chaos-effect.active {
+            color: var(--chaos-color);
+            font-weight: bold;
+            background-color: rgba(207, 102, 121, 0.1);
+            transform: scale(1.02);
+            box-shadow: 0 0 15px var(--chaos-color);
+        }
+
+        .controls {
+            /* Now 3 columns */
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; 
+            gap: 1rem;
+            margin: 1.5rem 0;
+            width: 100%;
+        }
+
+        .btn {
+            background-color: var(--button-color);
+            color: #000;
+            border: none;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:hover {
+            background-color: #4dd0e1;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+        
+        /* New styles for specific buttons */
+        #new-game-btn {
+            background-color: #787878;
+        }
+        
+        #new-game-btn:hover {
+            background-color: #9e9e9e;
+        }
+
+        #planeswalk-btn { /* Renamed from roll-die-btn */
+            background-color: var(--planeswalk-color);
+            color: var(--background-dark); /* Contrast with button color */
+        }
+        #planeswalk-btn:hover {
+            background-color: #4dd0e1; /* Example hover, can be changed */
+        }
+
+        #chaos-btn { /* New chaos button */
+            background-color: var(--chaos-color);
+            color: var(--background-dark); /* Contrast with button color */
+        }
+        #chaos-btn:hover {
+            background-color: #e9a3af; /* Example hover, can be changed */
+        }
+        
+        #dice-result {
+            min-height: 50px;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 1.75rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            width: 100%;
+            /* Removed dice roll animation properties */
+            animation-duration: 0s; 
+            animation-timing-function: initial;
+        }
+
+        /* Removed dice roll animation keyframes and classes */
+        /* @keyframes diceRoll {} */
+        /* @keyframes textChange {} */
+        /* #dice-result.rolling {} */
+        /* #dice-result.text-fade-in {} */
+
+
+        .planeswalk-text {
+            color: var(--planeswalk-color);
+            text-shadow: 0 0 10px var(--planeswalk-color);
+        }
+
+        .chaos-text {
+            color: var(--chaos-color);
+            text-shadow: 0 0 10px var(--chaos-color);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 id="app-title">Planechase Companion</h1>
+
+        <div id="loading-message">
+            <p>Summoning the planar deck...</p>
+        </div>
+        
+        <div id="error-message" style="display: none;"></div>
+
+        <div id="game-area">
+            <img id="card-image" src="" alt="Planechase Card">
+            
+            <div id="card-info">
+                <h2 id="card-name"></h2>
+                <p id="card-effect"></p>
+                <p id="chaos-effect"></p>
+            </div>
+
+            <div class="controls">
+                <button id="new-game-btn" class="btn">New Game</button>
+                <button id="planeswalk-btn" class="btn">Planeswalk</button>
+                <button id="chaos-btn" class="btn">Chaos</button>
+            </div>
+            
+            <div id="dice-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const elements = {
+            loadingMsg: document.getElementById('loading-message'),
+            errorMsg: document.getElementById('error-message'),
+            gameArea: document.getElementById('game-area'),
+            cardImage: document.getElementById('card-image'),
+            cardName: document.getElementById('card-name'),
+            cardEffect: document.getElementById('card-effect'),
+            chaosEffect: document.getElementById('chaos-effect'),
+            // Updated element references
+            planeswalkBtn: document.getElementById('planeswalk-btn'), // Renamed from rollBtn
+            chaosBtn: document.getElementById('chaos-btn'),       // New button
+            newGameBtn: document.getElementById('new-game-btn'),
+            diceResult: document.getElementById('dice-result'),
+        };
+
+        let planarDeck = [];
+        let currentPlane = null;
+        const SCRYFALL_API_URL = 'https://api.scryfall.com/cards/search?q=t%3Aplane';
+
+        async function initializeApp() {
+            try {
+                const response = await fetch(SCRYFALL_API_URL);
+                if (!response.ok) {
+                    throw new Error(`Scryfall API error: ${response.status}`);
+                }
+                const data = await response.json();
+                
+const ignoreList = ['Circus of the Sun', `Pin Collector's Booth`, 'The Windy City', 'Pursued by Something', 'The Bean', `New Player's Journey`, 'High Noon At Thunder Junction'];
+                
+                planarDeck = data.data.map(card => {
+                    const textParts = card.oracle_text.split(/\n(.*)/s);
+                    return {
+                        name: card.name,
+                        // ENSURE THIS IS 'normal' or 'png' to get portrait images
+                        imageUrl: card.image_uris.normal || card.image_uris.png, // Fallback to png if normal isn't available
+                        effect: textParts[0],
+                        chaos: textParts[1] ? textParts[1].trim() : "This plane has no chaos ability."
+                    };
+                }).filter((card) => !ignoreList.includes(card.name));
+                
+                elements.loadingMsg.style.display = 'none';
+                elements.gameArea.style.display = 'flex';
+                startNewGame();
+
+            } catch (error) {
+                console.error("Failed to fetch planar deck:", error);
+                elements.loadingMsg.style.display = 'none';
+                elements.errorMsg.textContent = 'Could not load card data. Please check your internet connection and refresh.';
+                elements.errorMsg.style.display = 'block';
+            }
+        }
+
+        function updateCardDisplay(plane) {
+            elements.cardImage.src = plane.imageUrl;
+            elements.cardImage.alt = plane.name;
+            elements.cardName.textContent = plane.name;
+            elements.cardEffect.textContent = plane.effect;
+            elements.chaosEffect.textContent = plane.chaos;
+            // Always remove chaos highlight when a new card is displayed
+            elements.chaosEffect.classList.remove('active');
+            // Clear dice result message and reset its styles
+            elements.diceResult.textContent = ''; 
+            elements.diceResult.className = 'dice-result'; 
+        }
+        
+        function startNewGame() {
+            if (planarDeck.length === 0) return;
+            
+            elements.diceResult.textContent = 'A new journey begins!';
+            elements.diceResult.className = 'dice-result'; // Reset classes
+            
+            const randomIndex = Math.floor(Math.random() * planarDeck.length);
+            currentPlane = planarDeck[randomIndex];
+            updateCardDisplay(currentPlane);
+        }
+        
+        // This function now specifically handles Planeswalk button click
+        function handlePlaneswalk() {
+            elements.chaosEffect.classList.remove('active'); // Clear chaos highlight
+            elements.diceResult.textContent = 'PLANESWALK!';
+            elements.diceResult.classList.add('planeswalk-text');
+            
+            // Short delay before changing card to show "PLANESWALK!" message
+            setTimeout(() => {
+                const availablePlanes = planarDeck.filter(plane => plane.name !== currentPlane.name);
+                // Handle case if only one plane remains (e.g., reshuffle or just stay)
+                if (availablePlanes.length === 0) {
+                    // For simplicity, if only one card left, restart or show message
+                    // Or, implement a full deck reshuffle and draw from all cards
+                    startNewGame(); // For now, let's just restart
+                    elements.diceResult.textContent = 'Deck reshuffled! New plane.';
+                    elements.diceResult.classList.add('planeswalk-text');
+                    return;
+                }
+
+                const randomIndex = Math.floor(Math.random() * availablePlanes.length);
+                currentPlane = availablePlanes[randomIndex];
+                updateCardDisplay(currentPlane);
+            }, 500); // Give user a moment to read "PLANESWALK!"
+        }
+
+        // This function now specifically handles Chaos button click
+        function handleChaos() {
+            elements.chaosEffect.classList.add('active'); // Apply chaos highlight
+            elements.diceResult.textContent = 'CHAOS!';
+            elements.diceResult.classList.add('chaos-text');
+        }
+        
+        // Event Listeners
+        elements.planeswalkBtn.addEventListener('click', handlePlaneswalk); // Updated listener
+        elements.chaosBtn.addEventListener('click', handleChaos);       // New listener
+        elements.newGameBtn.addEventListener('click', startNewGame);
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
